@@ -1,0 +1,14 @@
+[Unit]
+Description=Canvas Lab server monitoring agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/canvas-lab-agent.env
+ExecStart=/usr/bin/python3 /opt/canvas-lab-agent/agent.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

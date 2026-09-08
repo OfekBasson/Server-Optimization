@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: canvas_lab
+      POSTGRES_PASSWORD: canvas_lab
+      POSTGRES_DB: canvas_lab
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://canvas_lab:canvas_lab@db:5432/canvas_lab
+      AGENT_API_KEY: ${AGENT_API_KEY:-change-me}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-change-me-too}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+      MS_CLIENT_ID: ${MS_CLIENT_ID:-}
+      MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
+      MS_TENANT_ID: ${MS_TENANT_ID:-}
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:

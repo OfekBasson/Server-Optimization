@@ -5,6 +5,8 @@ No job here ever auto-releases a reservation - they only ever send a
 WhatsApp nudge and let the holder decide.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timedelta, timezone
 

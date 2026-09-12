@@ -7,6 +7,8 @@ the app - including every notification-triggering workflow - can be
 exercised safely before Twilio is turned on for real.
 """
 
+from __future__ import annotations
+
 import logging
 
 from sqlalchemy.orm import Session

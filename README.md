@@ -30,7 +30,55 @@ changes — safe to re-run, it skips servers that already exist by name):
 add them via `POST /api/servers` or directly in the DB if you want watch
 requests to filter on those too.
 
-## Running locally
+## Just want to look at it? (no Docker, no deploy)
+
+The fastest way to see the actual app running, on your own machine, with
+nothing installed but Python and Node - no Postgres, no Docker, no lab
+server:
+
+```bash
+git clone https://github.com/OfekBasson/Server-Optimization.git
+cd Server-Optimization
+git checkout claude/canvas-lab-server-manager-dlef6l
+
+# Backend, pointed at a local SQLite file instead of Postgres
+cd backend
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+export DATABASE_URL="sqlite:///$(pwd)/demo.db"
+export PYTHONPATH="$(pwd)"
+python3 scripts/init_db.py
+python3 scripts/seed_servers.py       # real mass-01..06 hardware
+python3 scripts/seed_demo_data.py     # 2 fake users + 2 bookings so it's not empty
+
+uvicorn app.main:app --port 8000      # leave this running
+```
+
+In a second terminal:
+
+```bash
+cd Server-Optimization/frontend
+npm install
+npm run dev                            # leave this running too
+```
+
+Open **http://localhost:5173**. You'll see the real dashboard and calendars,
+with mass-01 shown as reserved by the demo data.
+
+What works without any further setup: browsing the dashboard, opening a
+server's calendar, seeing the idle/reserved status. What needs the Azure
+step below first: clicking to actually create a new booking or watch
+request through the UI (both now require being signed in) — until then,
+you can still create test bookings directly via the interactive API docs
+at **http://localhost:8000/docs** (try `POST /api/reservations`) and see
+them show up in the calendar.
+
+To stop: `Ctrl+C` both terminals. Nothing here touches the real lab
+servers or sends any notifications (Twilio is off by default) - this is
+fully sandboxed on your own machine, safe to leave running.
+
+## Running with Docker (closer to the real deployment)
 
 ```bash
 cp .env.example .env

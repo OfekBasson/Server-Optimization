@@ -49,10 +49,11 @@ pip install -r requirements.txt
 export DATABASE_URL="sqlite:///$(pwd)/demo.db"
 export PYTHONPATH="$(pwd)"
 python3 scripts/init_db.py
-python3 scripts/seed_servers.py       # real mass-01..06 hardware
-python3 scripts/seed_demo_data.py     # 2 fake users + 2 bookings so it's not empty
+python3 scripts/seed_servers.py             # real mass-01..06 hardware
+python3 scripts/seed_admin.py "Your Name" you@post.runi.ac.il
+python3 scripts/seed_demo_data.py           # 2 fake users + 2 bookings so it's not empty
 
-uvicorn app.main:app --port 8000      # leave this running
+uvicorn app.main:app --port 8000            # leave this running
 ```
 
 In a second terminal:
@@ -63,16 +64,11 @@ npm install
 npm run dev                            # leave this running too
 ```
 
-Open **http://localhost:5173**. You'll see the real dashboard and calendars,
-with mass-01 shown as reserved by the demo data.
-
-What works without any further setup: browsing the dashboard, opening a
-server's calendar, seeing the idle/reserved status. What needs the Azure
-step below first: clicking to actually create a new booking or watch
-request through the UI (both now require being signed in) — until then,
-you can still create test bookings directly via the interactive API docs
-at **http://localhost:8000/docs** (try `POST /api/reservations`) and see
-them show up in the calendar.
+Open **http://localhost:5173**, pick your name from the "Who are you?"
+dropdown top right, and click Continue. That's it — no OAuth, no password.
+You'll see the real dashboard and calendars, mass-01 shown as reserved by
+the demo data, and (since `seed_admin.py` made you an admin) an **Admin**
+link for adding more users.
 
 To stop: `Ctrl+C` both terminals. Nothing here touches the real lab
 servers or sends any notifications (Twilio is off by default) - this is
@@ -84,6 +80,7 @@ fully sandboxed on your own machine, safe to leave running.
 cp .env.example .env
 docker compose up --build
 docker compose exec backend python scripts/seed_servers.py
+docker compose exec backend python scripts/seed_admin.py "Your Name" you@post.runi.ac.il
 ```
 
 API is at `http://localhost:8000` (interactive docs at `/docs`). Health
@@ -111,54 +108,33 @@ BACKEND_URL=http://<backend-host>:8000 AGENT_API_KEY=<key> SERVER_NAME=mass-01 p
 (`mass-01` .. `mass-06`). For a permanent install see "Installing the
 agent on all 6 servers" below.
 
-## Setting up Microsoft login (do this once)
+## Identifying yourself (no Microsoft OAuth)
 
-Login is wired up in the code (session cookie, `/api/auth/login`,
-`/api/auth/me`, `/api/auth/logout`) but needs an app registration in your
-university's Azure AD tenant before it'll work — that part only someone
-with a university Microsoft account can do, in the browser:
+There's no login/password. Instead, the nav bar has a "Who are you?"
+dropdown listing every user the admin has added — pick your name, click
+Continue, and a session cookie remembers you (`/api/auth/me` reads it back,
+"Sign out" clears it). This only makes sense on a trusted internal network,
+not exposed publicly, since anyone can pick anyone's name.
 
-1. Go to **https://portal.azure.com** → sign in with your university
-   account → search **"App registrations"** → **New registration**.
-   - If your university account can't create app registrations (some IT
-     departments lock this down to admins), you'll need to ask IT to
-     either create one for you or grant permission.
-2. Name it something like "Canvas Lab Server Manager". Under **Supported
-   account types**, pick **"Accounts in this organizational directory
-   only"** (single tenant) so only university accounts can log in.
-3. Under **Redirect URI**, choose platform **Web** and enter the backend's
-   callback URL — for local dev: `http://localhost:8000/api/auth/callback`.
-   For the real deployment, use `http://<lab-server-host>:8000/api/auth/callback`
-   (same as `MS_REDIRECT_URI` below). Register.
-4. On the app's **Overview** page, copy:
-   - **Application (client) ID** → `MS_CLIENT_ID`
-   - **Directory (tenant) ID** → `MS_TENANT_ID`
-5. Go to **Certificates & secrets** → **New client secret** → copy the
-   secret **value** (not the ID, and copy it immediately — Azure won't show
-   it again) → `MS_CLIENT_SECRET`.
-6. Go to **API permissions** → confirm `User.Read` (Microsoft Graph,
-   delegated) is present — it's added by default. That's enough; this app
-   only needs the signed-in user's name/email, not deeper Graph access.
-7. Put all four values in `.env`:
-   ```
-   MS_CLIENT_ID=<from step 4>
-   MS_CLIENT_SECRET=<from step 5>
-   MS_TENANT_ID=<from step 4>
-   MS_REDIRECT_URI=http://localhost:8000/api/auth/callback   # or your real host
-   ```
-8. Restart the backend. "Sign in with Microsoft" in the nav bar will now
-   redirect to a real Microsoft login, and land back on the app logged in.
+**Adding users** is admin-only, through the **Admin** nav link (only
+visible to admins) or directly via `POST /api/admin/users`. The very first
+admin has to be created once from the command line, since the admin API
+itself requires an existing admin to call it:
 
-Notes on what the code does with this once configured:
-- On first login, a `User` row is created automatically from the
-  account's email/name — no separate signup step.
-- The login state is a signed session cookie (`SESSION_SECRET_KEY` in
-  `.env` signs it — set that to something random, not the default, before
-  going live).
-- `FRONTEND_URL` is where the browser gets redirected after login, and
-  `CORS_ORIGINS` is which origin(s) the frontend is allowed to call the
-  API from — both default to `http://localhost:5173` for local dev; update
-  them to the real host when you deploy.
+```bash
+python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
+# (docker compose exec backend python scripts/seed_admin.py ... if using Docker)
+```
+
+That user can then add everyone else (and make other people admins) from
+the Admin page. Running it again on an existing email just promotes that
+user to admin instead of duplicating them.
+
+`SESSION_SECRET_KEY` in `.env` signs the session cookie — set it to
+something random before going live, not the default. `CORS_ORIGINS` is
+which origin(s) the frontend is allowed to call the API from — defaults to
+`http://localhost:5173` for local dev; update it to the real host when you
+deploy.
 
 ## Mapping OS usernames (needed for idle/takeover detection)
 
@@ -178,9 +154,10 @@ curl -X POST http://localhost:8000/api/os-usernames \
   }'
 ```
 
-If that email doesn't have a `User` row yet (hasn't logged in via
-Microsoft), one is created automatically so mappings can be set up ahead
-of time. Repeat once per person per server they have a Linux account on.
+If that email doesn't have a `User` row yet (the admin hasn't added them),
+one is created automatically (as a non-admin) so mappings can be set up
+ahead of time. Repeat once per person per server they have a Linux
+account on.
 List existing mappings for a server: `GET /api/os-usernames?server_name=mass-01`.
 
 This endpoint has no auth check yet — fine on a trusted lab network for
@@ -200,13 +177,12 @@ cd Server-Optimization
 git checkout claude/canvas-lab-server-manager-dlef6l   # or main, once merged
 
 cp .env.example .env
-nano .env   # fill in SESSION_SECRET_KEY (random string), MS_* once you have
-            # them from the Azure steps above, and set FRONTEND_URL /
-            # MS_REDIRECT_URI to this server's real hostname instead of
-            # localhost
+nano .env   # set SESSION_SECRET_KEY to a random string, and CORS_ORIGINS
+            # to this server's real hostname:5173 instead of localhost
 
 docker compose up -d --build
 docker compose exec backend python scripts/seed_servers.py
+docker compose exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
 ```
 
 Backend is now running on port 8000 of that host. For the frontend:

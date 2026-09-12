@@ -133,7 +133,7 @@ class OsUsernameOut(BaseModel):
     os_username: str
 
 
-# ---------- Current user (session) ----------
+# ---------- Users / identification ----------
 
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -141,6 +141,33 @@ class UserOut(BaseModel):
     name: str
     university_email: str
     whatsapp_number: Optional[str] = None
+    is_admin: bool = False
+
+
+class UserSummary(BaseModel):
+    """Public list for the "who are you" picker - no whatsapp number."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    university_email: str
+
+
+class SelectUserRequest(BaseModel):
+    user_id: int
+
+
+class UserCreate(BaseModel):
+    name: str
+    university_email: str
+    whatsapp_number: Optional[str] = None
+    is_admin: bool = False
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+    is_admin: Optional[bool] = None
 
 
 # ---------- Notifications ----------

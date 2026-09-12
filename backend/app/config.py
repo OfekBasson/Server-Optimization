@@ -15,22 +15,14 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_whatsapp_from: str = ""  # e.g. "whatsapp:+14155238886"
 
-    # Microsoft OIDC (university/Outlook accounts)
-    ms_client_id: str = ""
-    ms_client_secret: str = ""
-    ms_tenant_id: str = ""
-    ms_redirect_uri: str = "http://localhost:8000/api/auth/callback"
-
-    # Where to send the browser back to after a successful login, and which
-    # origin(s) the frontend is served from (comma-separated for CORS).
-    frontend_url: str = "http://localhost:5173"
+    # Which origin(s) the frontend is served from (comma-separated for CORS).
     cors_origins: str = "http://localhost:5173"
 
     # Shared secret the monitoring agents authenticate with
     agent_api_key: str = "change-me"
     agent_poll_interval_minutes: int = 15
 
-    # Signs the OAuth login session cookie
+    # Signs the "who are you" session cookie
     session_secret_key: str = "change-me-too"
 
     # Idle-but-reserved detection

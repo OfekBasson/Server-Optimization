@@ -4,7 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .config import settings
 from .database import Base, engine
-from .routers import analytics, auth, os_usernames, reservations, servers, usage, watch_requests
+from .routers import admin, analytics, auth, os_usernames, reservations, servers, usage, watch_requests
 from .services.scheduler import start_scheduler
 
 Base.metadata.create_all(bind=engine)
@@ -27,6 +27,7 @@ app.include_router(usage.router)
 app.include_router(analytics.router)
 app.include_router(auth.router)
 app.include_router(os_usernames.router)
+app.include_router(admin.router)
 
 
 @app.on_event("startup")

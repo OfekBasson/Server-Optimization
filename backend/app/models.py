@@ -48,8 +48,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     university_email = Column(String, unique=True, nullable=False, index=True)
-    microsoft_account_id = Column(String, unique=True, nullable=True, index=True)
     whatsapp_number = Column(String, nullable=True)
+    is_admin = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     os_usernames = relationship(

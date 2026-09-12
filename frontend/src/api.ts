@@ -34,6 +34,13 @@ export type CurrentUser = {
   name: string
   university_email: string
   whatsapp_number: string | null
+  is_admin: boolean
+}
+
+export type UserSummary = {
+  id: number
+  name: string
+  university_email: string
 }
 
 export type WatchRequest = {
@@ -77,4 +84,19 @@ export const api = {
     request<WatchRequest>('/watch-requests', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<CurrentUser>('/auth/me'),
   logout: () => request<{ status: string }>('/auth/logout', { method: 'POST' }),
+  listSelectableUsers: () => request<UserSummary[]>('/auth/users'),
+  selectUser: (userId: number) =>
+    request<CurrentUser>('/auth/select', { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
+
+  adminListUsers: () => request<CurrentUser[]>('/admin/users'),
+  adminCreateUser: (payload: {
+    name: string
+    university_email: string
+    whatsapp_number?: string
+    is_admin?: boolean
+  }) => request<CurrentUser>('/admin/users', { method: 'POST', body: JSON.stringify(payload) }),
+  adminUpdateUser: (
+    id: number,
+    payload: Partial<{ name: string; whatsapp_number: string; is_admin: boolean }>,
+  ) => request<CurrentUser>(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
 }

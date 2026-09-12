@@ -121,3 +121,47 @@ button {
   cursor: pointer;
   font-weight: 600;
 }
+
+.user-picker {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.user-picker select {
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.user-picker button {
+  padding: 0.35rem 0.75rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 640px;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid #eef0f3;
+  font-size: 0.9rem;
+}
+
+th {
+  background: #f5f6f8;
+  font-weight: 600;
+}
+
+td button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}

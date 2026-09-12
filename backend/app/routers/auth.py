@@ -1,81 +1,42 @@
-"""Microsoft OIDC login (university/Outlook accounts).
-
-Requires MS_CLIENT_ID / MS_CLIENT_SECRET / MS_TENANT_ID to be set (an app
-registration in the university's Azure AD tenant); until then /login
-returns 501 so the rest of the app still runs without it configured.
+"""No-password identification: pick your own name from the list of users
+the admin has added. This is intentionally not real authentication -
+appropriate for a tool on a trusted internal lab network, not for
+anything exposed publicly. See routers/admin.py for adding users.
 """
 
-from authlib.integrations.starlette_client import OAuth
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from starlette.responses import RedirectResponse
 
 from .. import models, schemas
-from ..config import settings
 from ..database import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-oauth = OAuth()
-if settings.ms_client_id:
-    oauth.register(
-        name="microsoft",
-        client_id=settings.ms_client_id,
-        client_secret=settings.ms_client_secret,
-        server_metadata_url=(
-            f"https://login.microsoftonline.com/{settings.ms_tenant_id}"
-            "/v2.0/.well-known/openid-configuration"
-        ),
-        client_kwargs={"scope": "openid email profile"},
-    )
+
+@router.get("/users", response_model=list[schemas.UserSummary])
+def list_selectable_users(db: Session = Depends(get_db)):
+    return db.query(models.User).order_by(models.User.name).all()
 
 
-@router.get("/login")
-async def login(request: Request):
-    if not settings.ms_client_id:
-        raise HTTPException(status_code=501, detail="Microsoft OAuth is not configured yet")
-    return await oauth.microsoft.authorize_redirect(request, settings.ms_redirect_uri)
-
-
-@router.get("/callback")
-async def callback(request: Request, db: Session = Depends(get_db)):
-    if not settings.ms_client_id:
-        raise HTTPException(status_code=501, detail="Microsoft OAuth is not configured yet")
-
-    token = await oauth.microsoft.authorize_access_token(request)
-    userinfo = token.get("userinfo") or {}
-    email = userinfo.get("email") or userinfo.get("preferred_username")
-    account_id = userinfo.get("sub")
-    name = userinfo.get("name", email)
-
-    if not email:
-        raise HTTPException(status_code=400, detail="Microsoft account did not return an email")
-
-    user = db.query(models.User).filter(models.User.university_email == email).first()
+@router.post("/select", response_model=schemas.UserOut)
+def select_user(payload: schemas.SelectUserRequest, request: Request, db: Session = Depends(get_db)):
+    user = db.get(models.User, payload.user_id)
     if not user:
-        user = models.User(name=name, university_email=email, microsoft_account_id=account_id)
-        db.add(user)
-    else:
-        user.microsoft_account_id = account_id
-    db.commit()
-    db.refresh(user)
-
-    # The session cookie (signed by SESSION_SECRET_KEY, set up in main.py)
-    # is what makes the user "logged in" - /api/auth/me reads it back.
+        raise HTTPException(status_code=404, detail="No such user")
     request.session["user_id"] = user.id
-    return RedirectResponse(url=settings.frontend_url)
+    return user
 
 
 @router.get("/me", response_model=schemas.UserOut)
 def me(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     if not user_id:
-        raise HTTPException(status_code=401, detail="Not logged in")
+        raise HTTPException(status_code=401, detail="Not signed in")
 
     user = db.get(models.User, user_id)
     if not user:
         request.session.clear()
-        raise HTTPException(status_code=401, detail="Not logged in")
+        raise HTTPException(status_code=401, detail="Not signed in")
     return user
 
 

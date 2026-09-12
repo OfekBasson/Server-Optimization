@@ -33,9 +33,7 @@ export default function WatchRequests() {
     return (
       <div className="watch-requests">
         <h1>Notify me when a server is free</h1>
-        <p>
-          Please <a href="/api/auth/login">sign in with Microsoft</a> first.
-        </p>
+        <p>Pick who you are from the top right first.</p>
       </div>
     )
   }

@@ -35,7 +35,7 @@ export default function ServerCalendar() {
 
   const handleDateClick = async (arg: DateClickArg) => {
     if (!user) {
-      alert('Please sign in with Microsoft first.')
+      alert('Pick who you are from the top right first.')
       return
     }
     const purpose = window.prompt('What are you using it for?') || undefined

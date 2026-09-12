@@ -6,10 +6,12 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction'
 import { EventClickArg } from '@fullcalendar/core'
 import { api, Reservation } from '../api'
+import { useAuth } from '../AuthContext'
 
 export default function ServerCalendar() {
   const { serverId } = useParams()
   const id = Number(serverId)
+  const { user } = useAuth()
   const [reservations, setReservations] = useState<Reservation[]>([])
 
   const refresh = () => {
@@ -32,15 +34,17 @@ export default function ServerCalendar() {
     }))
 
   const handleDateClick = async (arg: DateClickArg) => {
-    const userIdInput = window.prompt('Your user ID')
-    if (!userIdInput) return
+    if (!user) {
+      alert('Please sign in with Microsoft first.')
+      return
+    }
     const purpose = window.prompt('What are you using it for?') || undefined
     const start = new Date(arg.dateStr)
     const end = new Date(start.getTime() + 60 * 60 * 1000)
     try {
       await api.createReservation({
         server_id: id,
-        user_id: Number(userIdInput),
+        user_id: user.id,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
         purpose,

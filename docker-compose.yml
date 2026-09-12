@@ -20,12 +20,16 @@ services:
       DATABASE_URL: postgresql+psycopg2://canvas_lab:canvas_lab@db:5432/canvas_lab
       AGENT_API_KEY: ${AGENT_API_KEY:-change-me}
       SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-change-me-too}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-false}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
       MS_CLIENT_ID: ${MS_CLIENT_ID:-}
       MS_CLIENT_SECRET: ${MS_CLIENT_SECRET:-}
       MS_TENANT_ID: ${MS_TENANT_ID:-}
+      MS_REDIRECT_URI: ${MS_REDIRECT_URI:-http://localhost:8000/api/auth/callback}
     ports:
       - "8000:8000"
 

@@ -1,18 +1,77 @@
-"""Seed the lab's servers. Edit SERVERS to match the real hardware, then
-run once (`python scripts/seed_servers.py`) - safe to re-run, existing
-servers (matched by name) are left untouched.
+"""Seed the lab's servers with the real mass-01..06 hardware.
+
+Safe to re-run - existing servers (matched by name) are left untouched, so
+edit SERVERS and re-run to add new ones without duplicating existing rows.
+
+cpu_cores / ram_gb / disk_gb aren't set below (not provided) - fill them
+in later via `POST /api/servers` or directly in the DB if useful for
+matching watch requests on CPU/RAM as well as GPU.
 """
 
 from app.database import SessionLocal
 from app.models import Server
 
+SSH_HOST = "mass.ohadf.com"
+
 SERVERS = [
-    {"name": "gpu-1", "hostname": "gpu-1.lab.local", "gpu_type": "RTX 4090", "gpu_count": 2, "vram_gb": 24, "cpu_cores": 32, "ram_gb": 128, "disk_gb": 2000},
-    {"name": "gpu-2", "hostname": "gpu-2.lab.local", "gpu_type": "RTX 4090", "gpu_count": 2, "vram_gb": 24, "cpu_cores": 32, "ram_gb": 128, "disk_gb": 2000},
-    {"name": "gpu-3", "hostname": "gpu-3.lab.local", "gpu_type": "A100", "gpu_count": 1, "vram_gb": 80, "cpu_cores": 64, "ram_gb": 256, "disk_gb": 4000},
-    {"name": "gpu-4", "hostname": "gpu-4.lab.local", "gpu_type": "A100", "gpu_count": 1, "vram_gb": 80, "cpu_cores": 64, "ram_gb": 256, "disk_gb": 4000},
-    {"name": "gpu-5", "hostname": "gpu-5.lab.local", "gpu_type": "RTX 3090", "gpu_count": 4, "vram_gb": 24, "cpu_cores": 48, "ram_gb": 256, "disk_gb": 4000},
-    {"name": "gpu-6", "hostname": "gpu-6.lab.local", "gpu_type": "RTX 3090", "gpu_count": 4, "vram_gb": 24, "cpu_cores": 48, "ram_gb": 256, "disk_gb": 4000},
+    {
+        "name": "mass-01",
+        "pi": "Ohad",
+        "hostname": SSH_HOST,
+        "ssh_port": 1203,
+        "gpu_type": "RTX 3090",
+        "gpu_count": 4,
+        "vram_gb": 24,
+    },
+    {
+        "name": "mass-02",
+        "pi": "Ohad",
+        "hostname": SSH_HOST,
+        "ssh_port": 1110,
+        "gpu_type": "Quadro RTX 5000 + TITAN V",
+        "gpu_count": 2,
+        # Mixed GPUs (16GB + 12GB) - set to the lower of the two so VRAM-based
+        # watch-request matching doesn't over-promise what's actually free.
+        "vram_gb": 12,
+        "notes": "Mixed GPUs: 1x Quadro RTX 5000 (16GB) + 1x TITAN V (12GB).",
+    },
+    {
+        "name": "mass-03",
+        "pi": "Arik & Ohad",
+        "hostname": SSH_HOST,
+        "ssh_port": 1206,
+        "gpu_type": "RTX 3090",
+        "gpu_count": 4,
+        "vram_gb": 24,
+    },
+    {
+        "name": "mass-04",
+        "pi": "Arik & Ohad",
+        "hostname": SSH_HOST,
+        "ssh_port": 1205,
+        "gpu_type": "RTX 3090",
+        "gpu_count": 4,
+        "vram_gb": 24,
+    },
+    {
+        "name": "mass-05",
+        "pi": "Arik & Ohad",
+        "hostname": SSH_HOST,
+        "ssh_port": 1204,
+        "gpu_type": "RTX 6000 Ada",
+        "gpu_count": 2,
+        "vram_gb": 48,
+    },
+    {
+        "name": "mass-06",
+        "pi": "Arik & Ohad",
+        "hostname": SSH_HOST,
+        "ssh_port": 1214,
+        "gpu_type": "RTX PRO 6000 Blackwell Max-Q",
+        "gpu_count": 1,
+        "vram_gb": 96,
+        "notes": "VRAM (96GB) is from public specs for this very new card - please verify against the actual hardware.",
+    },
 ]
 
 if __name__ == "__main__":

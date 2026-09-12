@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from starlette.responses import RedirectResponse
 
-from .. import models
+from .. import models, schemas
 from ..config import settings
 from ..database import get_db
 
@@ -60,6 +60,26 @@ async def callback(request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    # TODO: issue a real session/JWT for the frontend. For now redirect with
-    # the user id as a placeholder so the booking UI can be wired up next.
-    return RedirectResponse(url=f"/?user_id={user.id}")
+    # The session cookie (signed by SESSION_SECRET_KEY, set up in main.py)
+    # is what makes the user "logged in" - /api/auth/me reads it back.
+    request.session["user_id"] = user.id
+    return RedirectResponse(url=settings.frontend_url)
+
+
+@router.get("/me", response_model=schemas.UserOut)
+def me(request: Request, db: Session = Depends(get_db)):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Not logged in")
+
+    user = db.get(models.User, user_id)
+    if not user:
+        request.session.clear()
+        raise HTTPException(status_code=401, detail="Not logged in")
+    return user
+
+
+@router.post("/logout")
+def logout(request: Request):
+    request.session.clear()
+    return {"status": "ok"}

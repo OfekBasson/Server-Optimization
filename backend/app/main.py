@@ -4,7 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .config import settings
 from .database import Base, engine
-from .routers import analytics, auth, reservations, servers, usage, watch_requests
+from .routers import analytics, auth, os_usernames, reservations, servers, usage, watch_requests
 from .services.scheduler import start_scheduler
 
 Base.metadata.create_all(bind=engine)
@@ -14,7 +14,7 @@ app = FastAPI(title="Canvas Lab Server Manager")
 app.add_middleware(SessionMiddleware, secret_key=settings.session_secret_key)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,6 +26,7 @@ app.include_router(watch_requests.router)
 app.include_router(usage.router)
 app.include_router(analytics.router)
 app.include_router(auth.router)
+app.include_router(os_usernames.router)
 
 
 @app.on_event("startup")

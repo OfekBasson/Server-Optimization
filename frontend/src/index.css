@@ -17,8 +17,23 @@ body {
 
 nav {
   display: flex;
+  align-items: center;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+.nav-auth {
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+.nav-auth button {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
 }
 
 nav a {

@@ -11,6 +11,8 @@ from .models import NotificationType, ReservationStatus, WatchRequestStatus
 class ServerBase(BaseModel):
     name: str
     hostname: Optional[str] = None
+    ssh_port: Optional[int] = None
+    pi: Optional[str] = None
     gpu_type: Optional[str] = None
     gpu_count: int = 0
     vram_gb: Optional[float] = None
@@ -113,6 +115,32 @@ class UsageSampleOut(BaseModel):
     cpu_util_percent: Optional[float] = None
     ram_used_gb: Optional[float] = None
     active_processes: Optional[list[dict]] = None
+
+
+# ---------- OS username mapping ----------
+
+class OsUsernameCreate(BaseModel):
+    university_email: str
+    server_name: str
+    os_username: str
+
+
+class OsUsernameOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    server_id: int
+    os_username: str
+
+
+# ---------- Current user (session) ----------
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    university_email: str
+    whatsapp_number: Optional[str] = None
 
 
 # ---------- Notifications ----------

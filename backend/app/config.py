@@ -6,7 +6,11 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg2://postgres:postgres@localhost:5432/canvas_lab"
 
-    # Twilio WhatsApp
+    # Twilio WhatsApp - messages are only ever actually sent when this is
+    # true (on top of having real Twilio credentials set). Leave it false
+    # to keep every notification going to the log instead, e.g. while
+    # testing.
+    notifications_enabled: bool = False
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_whatsapp_from: str = ""  # e.g. "whatsapp:+14155238886"
@@ -16,6 +20,11 @@ class Settings(BaseSettings):
     ms_client_secret: str = ""
     ms_tenant_id: str = ""
     ms_redirect_uri: str = "http://localhost:8000/api/auth/callback"
+
+    # Where to send the browser back to after a successful login, and which
+    # origin(s) the frontend is served from (comma-separated for CORS).
+    frontend_url: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:5173"
 
     # Shared secret the monitoring agents authenticate with
     agent_api_key: str = "change-me"

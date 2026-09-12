@@ -84,6 +84,8 @@ class Server(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True, nullable=False)
     hostname = Column(String, nullable=True)
+    ssh_port = Column(Integer, nullable=True)
+    pi = Column(String, nullable=True)
 
     gpu_type = Column(String, nullable=True)
     gpu_count = Column(Integer, default=0)

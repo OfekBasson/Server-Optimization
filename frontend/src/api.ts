@@ -29,6 +29,13 @@ export type Server = {
   is_idle_flagged: boolean
 }
 
+export type CurrentUser = {
+  id: number
+  name: string
+  university_email: string
+  whatsapp_number: string | null
+}
+
 export type WatchRequest = {
   id: number
   user_id: number
@@ -43,6 +50,7 @@ export type WatchRequest = {
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     ...options,
   })
   if (!response.ok) {
@@ -67,4 +75,6 @@ export const api = {
     request<WatchRequest[]>(`/watch-requests?user_id=${userId}`),
   createWatchRequest: (payload: { user_id: number; min_vram_gb?: number; gpu_type?: string }) =>
     request<WatchRequest>('/watch-requests', { method: 'POST', body: JSON.stringify(payload) }),
+  me: () => request<CurrentUser>('/auth/me'),
+  logout: () => request<{ status: string }>('/auth/logout', { method: 'POST' }),
 }

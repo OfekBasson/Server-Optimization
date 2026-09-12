@@ -1,8 +1,10 @@
 """Outbound WhatsApp notifications via Twilio.
 
-If Twilio credentials aren't configured (e.g. local dev), messages are
-just logged instead of sent, so the rest of the app works without a
-Twilio account.
+Messages are only ever actually sent when settings.notifications_enabled
+is true *and* Twilio credentials are configured. Otherwise every message
+is just logged (and still recorded in NotificationLog), so the rest of
+the app - including every notification-triggering workflow - can be
+exercised safely before Twilio is turned on for real.
 """
 
 import logging
@@ -31,7 +33,7 @@ def send_whatsapp(db: Session, *, user_id: int, whatsapp_number: str | None,
                    server_id: int | None = None) -> None:
     """Send a WhatsApp message (or log it, if Twilio isn't configured) and record it."""
 
-    client = _get_client()
+    client = _get_client() if settings.notifications_enabled else None
     if client and whatsapp_number:
         try:
             client.messages.create(

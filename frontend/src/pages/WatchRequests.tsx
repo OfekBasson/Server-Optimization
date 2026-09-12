@@ -1,29 +1,43 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { api, WatchRequest } from '../api'
+import { useAuth } from '../AuthContext'
 
 export default function WatchRequests() {
-  const [userId, setUserId] = useState('')
+  const { user } = useAuth()
   const [minVram, setMinVram] = useState('')
   const [gpuType, setGpuType] = useState('')
   const [requests, setRequests] = useState<WatchRequest[]>([])
 
-  const load = async (id: string) => {
-    if (!id) return
-    setRequests(await api.listWatchRequests(Number(id)))
+  const load = async () => {
+    if (!user) return
+    setRequests(await api.listWatchRequests(user.id))
   }
 
   useEffect(() => {
-    // no-op on mount: user ID is entered by hand for now, until auth is wired up
-  }, [])
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!user) return
     await api.createWatchRequest({
-      user_id: Number(userId),
+      user_id: user.id,
       min_vram_gb: minVram ? Number(minVram) : undefined,
       gpu_type: gpuType || undefined,
     })
-    load(userId)
+    load()
+  }
+
+  if (!user) {
+    return (
+      <div className="watch-requests">
+        <h1>Notify me when a server is free</h1>
+        <p>
+          Please <a href="/api/auth/login">sign in with Microsoft</a> first.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -31,21 +45,20 @@ export default function WatchRequests() {
       <h1>Notify me when a server is free</h1>
       <form onSubmit={submit}>
         <label>
-          Your user ID
-          <input value={userId} onChange={(e) => setUserId(e.target.value)} required />
-        </label>
-        <label>
           Min VRAM (GB)
           <input value={minVram} onChange={(e) => setMinVram(e.target.value)} type="number" />
         </label>
         <label>
           GPU type
-          <input value={gpuType} onChange={(e) => setGpuType(e.target.value)} placeholder="e.g. A100" />
+          <input
+            value={gpuType}
+            onChange={(e) => setGpuType(e.target.value)}
+            placeholder="e.g. RTX 3090"
+          />
         </label>
         <button type="submit">Create watch request</button>
       </form>
 
-      <button onClick={() => load(userId)}>Refresh my requests</button>
       <ul>
         {requests.map((r) => (
           <li key={r.id}>

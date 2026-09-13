@@ -1,9 +1,9 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import ServerCalendar from './pages/ServerCalendar'
-import WatchRequests from './pages/WatchRequests'
 import Admin from './pages/Admin'
 import AdminLoginForm from './AdminLoginForm'
+import NotifyMeButton from './NotifyMeButton'
 import { AuthProvider, useAuth } from './AuthContext'
 
 function AuthStatus() {
@@ -31,7 +31,7 @@ function AppShell() {
     <div className={isCalendar ? 'app wide' : 'app'}>
       <nav>
         <Link to="/">Dashboard</Link>
-        <Link to="/watch-requests">Notify me when free</Link>
+        <NotifyMeButton />
         <AdminLink />
         <span className="nav-auth">
           <AuthStatus />
@@ -40,7 +40,6 @@ function AppShell() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/servers/:serverId" element={<ServerCalendar />} />
-        <Route path="/watch-requests" element={<WatchRequests />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>
     </div>

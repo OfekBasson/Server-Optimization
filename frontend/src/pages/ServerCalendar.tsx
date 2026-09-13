@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -13,6 +13,7 @@ export default function ServerCalendar() {
   const id = Number(serverId)
   const { user } = useAuth()
   const [reservations, setReservations] = useState<Reservation[]>([])
+  const calendarRef = useRef<FullCalendar>(null)
 
   const refresh = () => {
     api.serverCalendar(id).then(setReservations)
@@ -22,6 +23,14 @@ export default function ServerCalendar() {
     refresh()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  useEffect(() => {
+    // FullCalendar can mis-measure its width on mount (most visibly under
+    // React StrictMode's double-invoke in dev) - nudge it to remeasure
+    // once the layout has actually settled.
+    const timer = setTimeout(() => calendarRef.current?.getApi().updateSize(), 0)
+    return () => clearTimeout(timer)
+  }, [])
 
   const events = reservations
     .filter((r) => r.status === 'active')
@@ -70,15 +79,19 @@ export default function ServerCalendar() {
       <p className="calendar-hint">
         Click and drag across the time you want to book. Click an existing booking to release it.
       </p>
-      <FullCalendar
-        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-        initialView="timeGridWeek"
-        events={events}
-        selectable
-        select={handleSelect}
-        eventClick={handleEventClick}
-        height="auto"
-      />
+      <div className="calendar-wrap">
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          events={events}
+          selectable
+          select={handleSelect}
+          eventClick={handleEventClick}
+          height="100%"
+          scrollTime="07:00:00"
+        />
+      </div>
     </div>
   )
 }

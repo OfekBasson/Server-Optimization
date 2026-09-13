@@ -13,6 +13,11 @@ body {
   max-width: 1000px;
   margin: 0 auto;
   padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.app.wide {
+  max-width: 1400px;
 }
 
 nav {
@@ -97,6 +102,11 @@ nav a {
   margin: -0.5rem 0 1rem;
 }
 
+.calendar-wrap {
+  height: calc(100vh - 230px);
+  min-height: 400px;
+}
+
 form {
   display: flex;
   flex-direction: column;
@@ -144,7 +154,7 @@ button {
   padding: 0.35rem 0.75rem;
 }
 
-table {
+.admin table {
   border-collapse: collapse;
   width: 100%;
   max-width: 640px;
@@ -154,15 +164,15 @@ table {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-th,
-td {
+.admin th,
+.admin td {
   text-align: left;
   padding: 0.6rem 0.9rem;
   border-bottom: 1px solid #eef0f3;
   font-size: 0.9rem;
 }
 
-th {
+.admin th {
   background: #f5f6f8;
   font-weight: 600;
 }

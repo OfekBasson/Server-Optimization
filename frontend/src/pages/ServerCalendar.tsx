@@ -4,10 +4,13 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import { DateSelectArg, EventClickArg } from '@fullcalendar/core'
+import { DateSelectArg, EventMountArg } from '@fullcalendar/core'
 import { api, Reservation, UserSummary } from '../api'
 import IdentifyModal from '../IdentifyModal'
 import ConfirmDeleteModal from '../ConfirmDeleteModal'
+import EventContextMenu from '../EventContextMenu'
+
+type ContextMenuState = { x: number; y: number; id: number; title: string }
 
 export default function ServerCalendar() {
   const { serverId } = useParams()
@@ -15,6 +18,7 @@ export default function ServerCalendar() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [pendingSelection, setPendingSelection] = useState<{ start: Date; end: Date } | null>(null)
   const [pendingRelease, setPendingRelease] = useState<{ id: number; title: string } | null>(null)
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const calendarRef = useRef<FullCalendar>(null)
 
   const refresh = () => {
@@ -72,8 +76,30 @@ export default function ServerCalendar() {
     }
   }
 
-  const handleEventClick = (arg: EventClickArg) => {
-    setPendingRelease({ id: Number(arg.event.id), title: arg.event.title })
+  const handleEventDidMount = (info: EventMountArg) => {
+    const onContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        id: Number(info.event.id),
+        title: info.event.title,
+      })
+    }
+    info.el.addEventListener('contextmenu', onContextMenu)
+    ;(info.el as HTMLElement & { _contextMenuHandler?: (e: MouseEvent) => void })._contextMenuHandler =
+      onContextMenu
+  }
+
+  const handleEventWillUnmount = (info: EventMountArg) => {
+    const el = info.el as HTMLElement & { _contextMenuHandler?: (e: MouseEvent) => void }
+    if (el._contextMenuHandler) el.removeEventListener('contextmenu', el._contextMenuHandler)
+  }
+
+  const requestDelete = () => {
+    if (!contextMenu) return
+    setPendingRelease({ id: contextMenu.id, title: contextMenu.title })
+    setContextMenu(null)
   }
 
   const confirmRelease = async () => {
@@ -87,7 +113,7 @@ export default function ServerCalendar() {
     <div className="server-calendar">
       <h1>Server {id}</h1>
       <p className="calendar-hint">
-        Click and drag across the time you want to book. Click an existing booking to release it.
+        Click and drag across the time you want to book. Right-click an existing booking to release it.
       </p>
       <div className="calendar-wrap">
         <FullCalendar
@@ -97,11 +123,20 @@ export default function ServerCalendar() {
           events={events}
           selectable
           select={handleSelect}
-          eventClick={handleEventClick}
+          eventDidMount={handleEventDidMount}
+          eventWillUnmount={handleEventWillUnmount}
           height="100%"
           scrollTime="07:00:00"
         />
       </div>
+      {contextMenu && (
+        <EventContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onDelete={requestDelete}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
       {pendingSelection && (
         <IdentifyModal
           title="Who's booking this?"

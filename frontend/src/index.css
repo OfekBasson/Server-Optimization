@@ -203,6 +203,37 @@ button {
   cursor: not-allowed;
 }
 
+.context-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.context-menu {
+  position: fixed;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  padding: 0.25rem;
+  min-width: 130px;
+}
+
+.context-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #dc2626;
+  padding: 0.5rem 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.context-menu button:hover {
+  background: #fee2e2;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

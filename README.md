@@ -18,18 +18,29 @@ the one-time install of Docker Desktop itself.
 
 1. Install **Docker Desktop**: https://www.docker.com/products/docker-desktop
    (just click through the normal installer — no special permissions
-   needed beyond what any app install needs). Open it once so it's running.
-2. Install **Git**, or skip it and just download the code as a ZIP instead:
-   on the repo's GitHub page, green **Code** button → **Download ZIP** →
-   unzip it, then open a terminal in that folder.
+   needed beyond what any app install needs).
+2. **Open the Docker Desktop app itself** (double-click it like any
+   other app) and wait until it says it's running (a whale icon appears
+   in the menu bar / system tray). This step is easy to miss — the
+   `docker` command doesn't work in the terminal until the app has been
+   opened at least once. If you already had a terminal open, close it
+   and open a new one after this step so it picks up the change.
+3. Install **Git**, or skip it and just download the code as a ZIP
+   instead: on the repo's GitHub page, green **Code** button → **Download
+   ZIP** → unzip it, then open a terminal in that folder (skip the
+   `git clone`/`git checkout` lines below if you did this).
 
-**Then, in a terminal, inside the project folder:**
+**Then, in a terminal, inside the project folder** (copy each line
+separately rather than pasting the whole block at once, some terminals
+mishandle multi-line pastes):
 
 ```bash
 git clone https://github.com/OfekBasson/Server-Optimization.git
 cd Server-Optimization
-git checkout main   # skip this if you downloaded the ZIP already on main
+git checkout main
+```
 
+```bash
 cp .env.example .env
 docker compose up --build
 ```
@@ -41,7 +52,13 @@ backend). The first run takes a few minutes; after that it's fast. In a
 ```bash
 docker compose exec backend python scripts/seed_servers.py
 docker compose exec backend python scripts/seed_admin.py "Your Name" you@example.com YourPassword
-docker compose exec backend python scripts/seed_demo_data.py   # optional: adds fake users + example bookings
+```
+
+Optional, adds a couple of fake users and example bookings so the app
+isn't empty:
+
+```bash
+docker compose exec backend python scripts/seed_demo_data.py
 ```
 
 Then:
@@ -101,20 +118,33 @@ server:
 ```bash
 git clone https://github.com/OfekBasson/Server-Optimization.git
 cd Server-Optimization
-git checkout claude/canvas-lab-server-manager-dlef6l
+git checkout main
+```
 
-# Backend, pointed at a local SQLite file instead of Postgres
+Backend, pointed at a local SQLite file instead of Postgres:
+
+```bash
 cd backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 export DATABASE_URL="sqlite:///$(pwd)/demo.db"
 python3 scripts/init_db.py
-python3 scripts/seed_servers.py             # real mass-01..06 hardware
-python3 scripts/seed_admin.py "Your Name" you@post.runi.ac.il   # prompts for a password
-python3 scripts/seed_demo_data.py           # 2 fake users + 2 bookings so it's not empty
+python3 scripts/seed_servers.py
+python3 scripts/seed_admin.py "Your Name" you@post.runi.ac.il
+```
 
-uvicorn app.main:app --port 8000            # leave this running
+`seed_admin.py` prompts for a password interactively. Optional, adds a
+couple of fake users and example bookings:
+
+```bash
+python3 scripts/seed_demo_data.py
+```
+
+Then start the backend (leave it running):
+
+```bash
+uvicorn app.main:app --port 8000
 ```
 
 In a second terminal:
@@ -122,7 +152,7 @@ In a second terminal:
 ```bash
 cd Server-Optimization/frontend
 npm install
-npm run dev                            # leave this running too
+npm run dev
 ```
 
 Open **http://localhost:5173**. You'll see the real dashboard and
@@ -250,18 +280,26 @@ Actions** workflow that SSHes in and redeploys.
 
 SSH in as `ofek_basson@mass.ohadf.com -p 1204`, then:
 
-```bash
-curl -fsSL https://get.docker.com | sh   # if Docker isn't already installed
+Install Docker if it isn't already there:
 
+```bash
+curl -fsSL https://get.docker.com | sh
+```
+
+```bash
 git clone https://github.com/OfekBasson/Server-Optimization.git
 cd Server-Optimization
 git checkout main
 
 cp .env.prod.example .env
-nano .env   # generate random values for POSTGRES_PASSWORD / SESSION_SECRET_KEY /
-            # AGENT_API_KEY with: openssl rand -hex 32
-            # (leave DOMAIN blank for now, see step 2)
+nano .env
+```
 
+In `.env`, generate random values for `POSTGRES_PASSWORD`,
+`SESSION_SECRET_KEY`, and `AGENT_API_KEY` with `openssl rand -hex 32`
+(run it once per value). Leave `DOMAIN` blank for now — that's step 2.
+
+```bash
 cd frontend && npm ci && npm run build && cd ..
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec backend python scripts/seed_servers.py
@@ -300,7 +338,12 @@ confirm it's actually reachable from outside. Put that exact URL as
 hostname), then restart the backend so `CORS_ORIGINS` picks it up:
 
 ```bash
-nano .env    # DOMAIN=canvaslab.<your-tailnet-name>.ts.net
+nano .env
+```
+
+Set `DOMAIN=canvaslab.<your-tailnet-name>.ts.net` in that file, then:
+
+```bash
 docker compose -f docker-compose.prod.yml up -d
 ```
 
@@ -345,17 +388,20 @@ ssh <you>@mass.ohadf.com -p <that server's port>
 git clone https://github.com/OfekBasson/Server-Optimization.git /tmp/com
 sudo mkdir -p /opt/canvas-lab-agent
 sudo cp /tmp/com/agent/agent.py /opt/canvas-lab-agent/
-python3 -m pip install --user -r /tmp/com/agent/requirements.txt   # or a venv
+python3 -m pip install --user -r /tmp/com/agent/requirements.txt
 
 sudo cp /tmp/com/agent/canvas-lab-agent.env.example /etc/canvas-lab-agent.env
 sudo nano /etc/canvas-lab-agent.env
 ```
 
-Set, per machine:
+(use a venv instead of `--user` if you prefer)
+
+Set, per machine — `SERVER_NAME` must match the name `seed_servers.py`
+gave this machine (`mass-01`, `mass-02`, etc.):
 ```
 BACKEND_URL=http://<the-app-host>:8000
 AGENT_API_KEY=<same value as AGENT_API_KEY in the backend's .env>
-SERVER_NAME=mass-01   # mass-02 on that machine, etc. - must match seed_servers.py
+SERVER_NAME=mass-01
 POLL_INTERVAL_SECONDS=900
 ```
 
@@ -365,8 +411,13 @@ Then install the service:
 sudo cp /tmp/com/agent/canvas-lab-agent.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now canvas-lab-agent
-sudo systemctl status canvas-lab-agent   # confirm it's running
-journalctl -u canvas-lab-agent -f        # watch its logs live
+```
+
+Confirm it's running, and watch its logs live:
+
+```bash
+sudo systemctl status canvas-lab-agent
+journalctl -u canvas-lab-agent -f
 ```
 
 It'll now report GPU/CPU/RAM + per-process usernames every 15 minutes and

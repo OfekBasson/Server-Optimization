@@ -28,10 +28,10 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      DOMAIN: ${DOMAIN}
+      # Only reachable from this machine itself. Tailscale Funnel is what
+      # exposes it to the public internet (does its own HTTPS), so this is
+      # never bound to 0.0.0.0 / the lab network.
+      - "127.0.0.1:8080:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./frontend/dist:/srv/frontend:ro

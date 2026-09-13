@@ -174,29 +174,19 @@ List existing mappings for a server: `GET /api/os-usernames?server_name=mass-01`
 This endpoint has no auth check yet — fine on a trusted lab network for
 now, but worth locking down before exposing it more broadly.
 
-## Going live on the web (free domain, auto-deploy on push)
+## Going live on the web (free address, auto-deploy on push)
 
-This runs the app on a real HTTPS URL on one of the lab's own servers, with
-a free subdomain, and redeploys automatically every time `main` is pushed.
-Pieces involved: **Caddy** (reverse proxy that gets a free HTTPS cert
-automatically), **DuckDNS** (free subdomain), and a **GitHub Actions**
-workflow that SSHes in and redeploys.
+This runs the app on a real HTTPS URL on `mass.ohadf.com` (the lab
+server), and redeploys automatically every time `main` is pushed. Pieces
+involved: **Caddy** (local reverse proxy in front of the app),
+**Tailscale Funnel** (free — gives a public HTTPS URL and does the TLS,
+with **no need to open any inbound ports** on the lab network, since we
+can't be sure 80/443 are reachable from outside), and a **GitHub
+Actions** workflow that SSHes in and redeploys.
 
-### 1. Pick the server and get a free domain
+### 1. One-time setup on the server
 
-Pick one server to host the app (doesn't need to be one of the 6 GPU
-machines, but can be) — it needs to be reachable from the internet on
-ports 80/443. If your lab network blocks inbound connections (common on
-university networks), tell me and we'll switch to a tunnel-based option
-(e.g. Tailscale Funnel or Cloudflare Tunnel) instead, which needs no port
-forwarding at all.
-
-Get a free subdomain at **https://www.duckdns.org** (sign in with any
-account, e.g. GitHub) → add a subdomain, e.g. `canvaslab` → it becomes
-`canvaslab.duckdns.org` → point it at the server's public IP (DuckDNS's
-page does this for you once you enter the IP).
-
-### 2. One-time setup on the server
+SSH in as `ofek_basson@mass.ohadf.com -p 1204`, then:
 
 ```bash
 curl -fsSL https://get.docker.com | sh   # if Docker isn't already installed
@@ -206,9 +196,9 @@ cd Server-Optimization
 git checkout main
 
 cp .env.prod.example .env
-nano .env   # fill in DOMAIN (your duckdns.org address) and generate random
-            # values for POSTGRES_PASSWORD / SESSION_SECRET_KEY / AGENT_API_KEY
-            # with: openssl rand -hex 32
+nano .env   # generate random values for POSTGRES_PASSWORD / SESSION_SECRET_KEY /
+            # AGENT_API_KEY with: openssl rand -hex 32
+            # (leave DOMAIN blank for now, see step 2)
 
 cd frontend && npm ci && npm run build && cd ..
 docker compose -f docker-compose.prod.yml up -d --build
@@ -216,15 +206,47 @@ docker compose -f docker-compose.prod.yml exec backend python scripts/seed_serve
 docker compose -f docker-compose.prod.yml exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
 ```
 
-Caddy handles HTTPS automatically the first time it starts (needs ports
-80/443 open and the domain already pointing at this server). Visit
-`https://<your-domain>` — should just work, no port number needed.
+This starts Caddy listening on `127.0.0.1:8080` only — not yet reachable
+from outside the server itself. Step 2 exposes it publicly.
+
+### 2. Turn on Tailscale Funnel (the public HTTPS address)
+
+Still on the server:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --hostname=canvaslab
+```
+
+That prints a login link — open it in your browser and sign in (free,
+works with a Google/GitHub/Microsoft account). Then, one time only, in
+the [Tailscale admin console](https://login.tailscale.com/admin/machines):
+click the `canvaslab` machine → **enable HTTPS certificates** for the
+tailnet if prompted (Settings → click "enable" if it's not already on).
+
+Then turn the funnel on:
+
+```bash
+sudo tailscale funnel --bg 8080
+```
+
+It'll print the public URL — something like
+`https://canvaslab.<your-tailnet-name>.ts.net`. That's the site's real
+address; visit it from your phone on cellular data (not the lab wifi) to
+confirm it's actually reachable from outside. Put that exact URL as
+`DOMAIN=` in the server's `.env` file (no `https://` prefix, just the
+hostname), then restart the backend so `CORS_ORIGINS` picks it up:
+
+```bash
+nano .env    # DOMAIN=canvaslab.<your-tailnet-name>.ts.net
+docker compose -f docker-compose.prod.yml up -d
+```
 
 ### 3. Wire up auto-deploy on push
 
 A dedicated SSH key for this (not your personal one) — I generated one and
-sent it to you as a file. Add its **public** half to the deploy user's
-`~/.ssh/authorized_keys` on the server:
+sent it to you as a file. Add its **public** half to
+`~/.ssh/authorized_keys` for `ofek_basson` on the server:
 
 ```bash
 echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILffG2kQDwi08NaH+pRHn2HPDR2QtjwVAMB7W+Cthj/8 canvas-lab-deploy" >> ~/.ssh/authorized_keys
@@ -235,22 +257,20 @@ add these secrets:
 
 | Secret | Value |
 |---|---|
-| `DEPLOY_HOST` | the server's hostname or IP |
-| `DEPLOY_PORT` | its SSH port |
-| `DEPLOY_USER` | the SSH username to deploy as |
-| `DEPLOY_SSH_KEY` | the **private** key (the file sent to you — paste its full contents) |
-| `DEPLOY_PATH` | absolute path to the cloned repo on the server, e.g. `/home/you/Server-Optimization` |
+| `DEPLOY_HOST` | `mass.ohadf.com` |
+| `DEPLOY_PORT` | `1204` |
+| `DEPLOY_USER` | `ofek_basson` |
+| `DEPLOY_SSH_KEY` | the **private** key (the file sent to you earlier — paste its full contents, including the `BEGIN`/`END` lines) |
+| `DEPLOY_PATH` | `/home/ofek_basson/Server-Optimization` (wherever you cloned it in step 1 — adjust if different) |
 
 `.github/workflows/deploy.yml` is already in the repo — once those secrets
 exist, every push to `main` SSHes in, pulls, rebuilds the frontend,
 `docker compose -f docker-compose.prod.yml up -d --build`, and re-runs
 `init_db.py` (safe to run repeatedly — only creates tables that don't
-exist yet, never touches existing data). You can also trigger it manually
-from the repo's **Actions** tab (`workflow_dispatch`).
-
-This branch (`claude/canvas-lab-server-manager-dlef6l`) needs to be merged
-into `main` before pushes there start deploying — say the word and I'll
-open that PR.
+exist yet, never touches existing data). Tailscale Funnel itself keeps
+running in the background (`sudo tailscale funnel --bg`), so redeploys
+don't disturb it. You can also trigger the workflow manually from the
+repo's **Actions** tab (`workflow_dispatch`).
 
 ## Installing the agent on all 6 servers
 

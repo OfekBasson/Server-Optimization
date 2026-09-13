@@ -7,12 +7,14 @@ import interactionPlugin from '@fullcalendar/interaction'
 import { DateSelectArg, EventClickArg } from '@fullcalendar/core'
 import { api, Reservation, UserSummary } from '../api'
 import IdentifyModal from '../IdentifyModal'
+import ConfirmDeleteModal from '../ConfirmDeleteModal'
 
 export default function ServerCalendar() {
   const { serverId } = useParams()
   const id = Number(serverId)
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [pendingSelection, setPendingSelection] = useState<{ start: Date; end: Date } | null>(null)
+  const [pendingRelease, setPendingRelease] = useState<{ id: number; title: string } | null>(null)
   const calendarRef = useRef<FullCalendar>(null)
 
   const refresh = () => {
@@ -70,11 +72,15 @@ export default function ServerCalendar() {
     }
   }
 
-  const handleEventClick = async (arg: EventClickArg) => {
-    if (window.confirm('Release this reservation?')) {
-      await api.releaseReservation(Number(arg.event.id))
-      refresh()
-    }
+  const handleEventClick = (arg: EventClickArg) => {
+    setPendingRelease({ id: Number(arg.event.id), title: arg.event.title })
+  }
+
+  const confirmRelease = async () => {
+    if (!pendingRelease) return
+    await api.releaseReservation(pendingRelease.id)
+    setPendingRelease(null)
+    refresh()
   }
 
   return (
@@ -101,6 +107,14 @@ export default function ServerCalendar() {
           title="Who's booking this?"
           onConfirm={confirmSelection}
           onCancel={cancelSelection}
+        />
+      )}
+      {pendingRelease && (
+        <ConfirmDeleteModal
+          title="Release this reservation?"
+          message={pendingRelease.title}
+          onConfirm={confirmRelease}
+          onCancel={() => setPendingRelease(null)}
         />
       )}
     </div>

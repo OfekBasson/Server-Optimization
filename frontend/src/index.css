@@ -180,11 +180,27 @@ button {
   font-size: 1.1rem;
 }
 
-.modal select {
+.modal select,
+.modal input {
   width: 100%;
   padding: 0.5rem;
   border-radius: 6px;
   border: 1px solid #d1d5db;
+  box-sizing: border-box;
+}
+
+.modal p {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.modal-actions .danger {
+  background: #dc2626;
+}
+
+.modal-actions .danger:disabled {
+  background: #f3a5a5;
+  cursor: not-allowed;
 }
 
 .modal-actions {

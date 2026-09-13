@@ -4,6 +4,68 @@ Booking calendars, idle-server detection, and WhatsApp nudges for the lab's
 servers. See the data model and workflow notes in this project's planning
 discussion for the full design rationale; this README covers running it.
 
+## Run it locally for review (no lab server, no sudo needed)
+
+If you don't have server access yet (e.g. you're waiting on your
+supervisor to approve installing this on a lab machine), you can run the
+**entire app** — same code, same Docker setup that will eventually go on
+the lab server — on any regular computer (your own laptop, or your
+supervisor's, Mac/Windows/Linux). It only touches that computer; it never
+connects to any lab server, and no `sudo`/admin rights are needed beyond
+the one-time install of Docker Desktop itself.
+
+**One-time setup:**
+
+1. Install **Docker Desktop**: https://www.docker.com/products/docker-desktop
+   (just click through the normal installer — no special permissions
+   needed beyond what any app install needs). Open it once so it's running.
+2. Install **Git**, or skip it and just download the code as a ZIP instead:
+   on the repo's GitHub page, green **Code** button → **Download ZIP** →
+   unzip it, then open a terminal in that folder.
+
+**Then, in a terminal, inside the project folder:**
+
+```bash
+git clone https://github.com/OfekBasson/Server-Optimization.git
+cd Server-Optimization
+git checkout main   # skip this if you downloaded the ZIP already on main
+
+cp .env.example .env
+docker compose up --build
+```
+
+Leave that running — it downloads and starts everything (database +
+backend). The first run takes a few minutes; after that it's fast. In a
+**second terminal**, in the same folder:
+
+```bash
+docker compose exec backend python scripts/seed_servers.py
+docker compose exec backend python scripts/seed_admin.py "Your Name" you@example.com YourPassword
+docker compose exec backend python scripts/seed_demo_data.py   # optional: adds fake users + example bookings
+```
+
+Then:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open **http://localhost:5173** in a browser — that's the real app,
+running fully on this computer. Log in with the email/password you gave
+`seed_admin.py` (top-right of the page) to see the **Admin** page too. No
+messages get sent anywhere (Twilio is off by default), and nothing here
+can reach or affect the actual lab servers — it's completely sandboxed.
+
+**To stop:** `Ctrl+C` both terminals, then `docker compose down` (add
+`-v` on the end if you also want to wipe the local database and start
+fresh next time).
+
+This is exactly what will run on the lab server once it's approved — the
+only things that change for the real deployment are *where* it runs and
+that it gets a public web address (see "Going live on the web" below).
+
 ## Layout
 
 - `backend/` — FastAPI + PostgreSQL API, plus the scheduled jobs that detect

@@ -91,6 +91,12 @@ nav a {
   color: #b91c1c;
 }
 
+.calendar-hint {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: -0.5rem 0 1rem;
+}
+
 form {
   display: flex;
   flex-direction: column;

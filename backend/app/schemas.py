@@ -1,9 +1,22 @@
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, BeforeValidator, ConfigDict
 
 from .models import NotificationType, ReservationStatus, WatchRequestStatus
+from .utils import as_aware
+
+
+def _as_aware_or_none(v: Optional[datetime]) -> Optional[datetime]:
+    return as_aware(v) if v is not None else None
+
+
+# Datetimes read back from the DB aren't reliably timezone-aware (SQLite in
+# particular drops tzinfo entirely) - coercing here guarantees every "Out"
+# schema always serializes with an explicit UTC offset, so the frontend
+# never has to guess what timezone a bare timestamp is in.
+AwareDatetime = Annotated[datetime, BeforeValidator(as_aware)]
+AwareDatetimeOrNone = Annotated[Optional[datetime], BeforeValidator(_as_aware_or_none)]
 
 
 # ---------- Server ----------
@@ -52,13 +65,13 @@ class ReservationOut(BaseModel):
     id: int
     server_id: int
     user_id: int
-    start_time: datetime
-    end_time: datetime
+    start_time: AwareDatetime
+    end_time: AwareDatetime
     purpose: Optional[str] = None
     status: ReservationStatus
     idle_flagged: bool
-    idle_since: Optional[datetime] = None
-    created_at: datetime
+    idle_since: AwareDatetimeOrNone = None
+    created_at: AwareDatetime
 
 
 # ---------- Watch requests ----------
@@ -83,9 +96,9 @@ class WatchRequestOut(BaseModel):
     min_cpu_cores: Optional[int] = None
     min_ram_gb: Optional[float] = None
     status: WatchRequestStatus
-    created_at: datetime
-    expires_at: Optional[datetime] = None
-    fulfilled_at: Optional[datetime] = None
+    created_at: AwareDatetime
+    expires_at: AwareDatetimeOrNone = None
+    fulfilled_at: AwareDatetimeOrNone = None
 
 
 # ---------- Usage samples (posted by the monitoring agent) ----------
@@ -109,7 +122,7 @@ class UsageSampleOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     server_id: int
-    timestamp: datetime
+    timestamp: AwareDatetime
     gpu_util_percent: Optional[float] = None
     gpu_mem_used_gb: Optional[float] = None
     cpu_util_percent: Optional[float] = None
@@ -179,7 +192,7 @@ class NotificationLogOut(BaseModel):
     server_id: Optional[int] = None
     type: NotificationType
     message: str
-    sent_at: datetime
+    sent_at: AwareDatetime
 
 
 # ---------- Analytics ----------

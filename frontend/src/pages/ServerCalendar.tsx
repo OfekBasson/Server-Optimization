@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction'
-import { EventClickArg } from '@fullcalendar/core'
+import interactionPlugin from '@fullcalendar/interaction'
+import { DateSelectArg, EventClickArg } from '@fullcalendar/core'
 import { api, Reservation } from '../api'
 import { useAuth } from '../AuthContext'
 
@@ -33,25 +33,27 @@ export default function ServerCalendar() {
       color: r.idle_flagged ? '#d97706' : '#2563eb',
     }))
 
-  const handleDateClick = async (arg: DateClickArg) => {
+  const handleSelect = async (arg: DateSelectArg) => {
+    const calendarApi = arg.view.calendar
     if (!user) {
       alert('Pick who you are from the top right first.')
+      calendarApi.unselect()
       return
     }
     const purpose = window.prompt('What are you using it for?') || undefined
-    const start = new Date(arg.dateStr)
-    const end = new Date(start.getTime() + 60 * 60 * 1000)
     try {
       await api.createReservation({
         server_id: id,
         user_id: user.id,
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
+        start_time: arg.start.toISOString(),
+        end_time: arg.end.toISOString(),
         purpose,
       })
       refresh()
     } catch (err) {
       alert((err as Error).message)
+    } finally {
+      calendarApi.unselect()
     }
   }
 
@@ -65,12 +67,15 @@ export default function ServerCalendar() {
   return (
     <div className="server-calendar">
       <h1>Server {id}</h1>
+      <p className="calendar-hint">
+        Click and drag across the time you want to book. Click an existing booking to release it.
+      </p>
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
         events={events}
         selectable
-        dateClick={handleDateClick}
+        select={handleSelect}
         eventClick={handleEventClick}
         height="auto"
       />

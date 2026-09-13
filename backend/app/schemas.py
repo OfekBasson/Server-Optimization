@@ -166,21 +166,27 @@ class UserSummary(BaseModel):
     university_email: str
 
 
-class SelectUserRequest(BaseModel):
-    user_id: int
-
-
 class UserCreate(BaseModel):
     name: str
     university_email: str
     whatsapp_number: Optional[str] = None
     is_admin: bool = False
+    password: Optional[str] = None
 
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     whatsapp_number: Optional[str] = None
     is_admin: Optional[bool] = None
+
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class SetPasswordRequest(BaseModel):
+    password: str
 
 
 # ---------- Notifications ----------

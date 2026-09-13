@@ -1,41 +1,36 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { api, WatchRequest } from '../api'
-import { useAuth } from '../AuthContext'
+import { FormEvent, useState } from 'react'
+import { api, UserSummary, WatchRequest } from '../api'
+import IdentifyModal from '../IdentifyModal'
+
+type Pending = 'create' | 'view' | null
 
 export default function WatchRequests() {
-  const { user } = useAuth()
   const [minVram, setMinVram] = useState('')
   const [gpuType, setGpuType] = useState('')
-  const [requests, setRequests] = useState<WatchRequest[]>([])
+  const [pending, setPending] = useState<Pending>(null)
+  const [requests, setRequests] = useState<WatchRequest[] | null>(null)
+  const [viewedAs, setViewedAs] = useState<UserSummary | null>(null)
 
-  const load = async () => {
-    if (!user) return
-    setRequests(await api.listWatchRequests(user.id))
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
-
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!user) return
-    await api.createWatchRequest({
-      user_id: user.id,
-      min_vram_gb: minVram ? Number(minVram) : undefined,
-      gpu_type: gpuType || undefined,
-    })
-    load()
+    setPending('create')
   }
 
-  if (!user) {
-    return (
-      <div className="watch-requests">
-        <h1>Notify me when a server is free</h1>
-        <p>Pick who you are from the top right first.</p>
-      </div>
-    )
+  const handleIdentified = async (user: UserSummary) => {
+    if (pending === 'create') {
+      await api.createWatchRequest({
+        user_id: user.id,
+        min_vram_gb: minVram ? Number(minVram) : undefined,
+        gpu_type: gpuType || undefined,
+      })
+      setMinVram('')
+      setGpuType('')
+      alert(`Watch request created for ${user.name}.`)
+    } else if (pending === 'view') {
+      setViewedAs(user)
+      setRequests(await api.listWatchRequests(user.id))
+    }
+    setPending(null)
   }
 
   return (
@@ -57,13 +52,28 @@ export default function WatchRequests() {
         <button type="submit">Create watch request</button>
       </form>
 
-      <ul>
-        {requests.map((r) => (
-          <li key={r.id}>
-            {r.gpu_type || 'any GPU'} · min {r.min_vram_gb ?? '-'}GB · {r.status}
-          </li>
-        ))}
-      </ul>
+      <button onClick={() => setPending('view')}>View my requests</button>
+
+      {requests && (
+        <>
+          <h2>{viewedAs?.name}'s requests</h2>
+          <ul>
+            {requests.map((r) => (
+              <li key={r.id}>
+                {r.gpu_type || 'any GPU'} · min {r.min_vram_gb ?? '-'}GB · {r.status}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {pending && (
+        <IdentifyModal
+          title={pending === 'create' ? 'Who is this request for?' : 'Whose requests do you want to see?'}
+          onConfirm={handleIdentified}
+          onCancel={() => setPending(null)}
+        />
+      )}
     </div>
   )
 }

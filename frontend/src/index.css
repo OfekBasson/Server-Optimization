@@ -138,20 +138,65 @@ button {
   font-weight: 600;
 }
 
-.user-picker {
+.admin-login {
   display: inline-flex;
   gap: 0.5rem;
   align-items: center;
 }
 
-.user-picker select {
+.admin-login input {
   padding: 0.35rem 0.5rem;
+  width: 140px;
+}
+
+.admin-login button {
+  padding: 0.35rem 0.75rem;
+}
+
+.admin-login .error {
+  font-size: 0.8rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: white;
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: 320px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.modal select {
+  width: 100%;
+  padding: 0.5rem;
   border-radius: 6px;
   border: 1px solid #d1d5db;
 }
 
-.user-picker button {
-  padding: 0.35rem 0.75rem;
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.modal-actions .secondary {
+  background: #e5e7eb;
+  color: #1a1a1a;
 }
 
 .admin table {

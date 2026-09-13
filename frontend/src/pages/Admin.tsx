@@ -3,7 +3,7 @@ import { api, CurrentUser } from '../api'
 import { useAuth } from '../AuthContext'
 
 export default function Admin() {
-  const { user } = useAuth()
+  const { admin } = useAuth()
   const [users, setUsers] = useState<CurrentUser[]>([])
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -19,8 +19,7 @@ export default function Admin() {
 
   useEffect(load, [])
 
-  if (!user) return <p>Please sign in first.</p>
-  if (!user.is_admin) return <p>You don't have admin access.</p>
+  if (!admin) return <p>Please log in as admin first.</p>
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -37,8 +36,22 @@ export default function Admin() {
   }
 
   const toggleAdmin = async (u: CurrentUser) => {
-    await api.adminUpdateUser(u.id, { is_admin: !u.is_admin })
+    if (!u.is_admin) {
+      const password = window.prompt(`Set a password for ${u.name} (needed to log in as admin):`)
+      if (!password) return
+      await api.adminUpdateUser(u.id, { is_admin: true })
+      await api.adminSetPassword(u.id, password)
+    } else {
+      await api.adminUpdateUser(u.id, { is_admin: false })
+    }
     load()
+  }
+
+  const setPassword = async (u: CurrentUser) => {
+    const password = window.prompt(`New password for ${u.name}:`)
+    if (!password) return
+    await api.adminSetPassword(u.id, password)
+    alert('Password updated.')
   }
 
   return (
@@ -69,6 +82,7 @@ export default function Admin() {
             <th>Email</th>
             <th>WhatsApp</th>
             <th>Admin</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -80,6 +94,7 @@ export default function Admin() {
               <td>
                 <button onClick={() => toggleAdmin(u)}>{u.is_admin ? 'Revoke' : 'Make admin'}</button>
               </td>
+              <td>{u.is_admin && <button onClick={() => setPassword(u)}>Set password</button>}</td>
             </tr>
           ))}
         </tbody>

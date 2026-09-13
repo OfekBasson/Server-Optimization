@@ -5,14 +5,14 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { DateSelectArg, EventClickArg } from '@fullcalendar/core'
-import { api, Reservation } from '../api'
-import { useAuth } from '../AuthContext'
+import { api, Reservation, UserSummary } from '../api'
+import IdentifyModal from '../IdentifyModal'
 
 export default function ServerCalendar() {
   const { serverId } = useParams()
   const id = Number(serverId)
-  const { user } = useAuth()
   const [reservations, setReservations] = useState<Reservation[]>([])
+  const [pendingSelection, setPendingSelection] = useState<{ start: Date; end: Date } | null>(null)
   const calendarRef = useRef<FullCalendar>(null)
 
   const refresh = () => {
@@ -42,27 +42,31 @@ export default function ServerCalendar() {
       color: r.idle_flagged ? '#d97706' : '#2563eb',
     }))
 
-  const handleSelect = async (arg: DateSelectArg) => {
-    const calendarApi = arg.view.calendar
-    if (!user) {
-      alert('Pick who you are from the top right first.')
-      calendarApi.unselect()
-      return
-    }
+  const handleSelect = (arg: DateSelectArg) => {
+    setPendingSelection({ start: arg.start, end: arg.end })
+  }
+
+  const cancelSelection = () => {
+    setPendingSelection(null)
+    calendarRef.current?.getApi().unselect()
+  }
+
+  const confirmSelection = async (chosenUser: UserSummary) => {
+    if (!pendingSelection) return
     const purpose = window.prompt('What are you using it for?') || undefined
     try {
       await api.createReservation({
         server_id: id,
-        user_id: user.id,
-        start_time: arg.start.toISOString(),
-        end_time: arg.end.toISOString(),
+        user_id: chosenUser.id,
+        start_time: pendingSelection.start.toISOString(),
+        end_time: pendingSelection.end.toISOString(),
         purpose,
       })
       refresh()
     } catch (err) {
       alert((err as Error).message)
     } finally {
-      calendarApi.unselect()
+      cancelSelection()
     }
   }
 
@@ -92,6 +96,13 @@ export default function ServerCalendar() {
           scrollTime="07:00:00"
         />
       </div>
+      {pendingSelection && (
+        <IdentifyModal
+          title="Who's booking this?"
+          onConfirm={confirmSelection}
+          onCancel={cancelSelection}
+        />
+      )}
     </div>
   )
 }

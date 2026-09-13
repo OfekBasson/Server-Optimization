@@ -84,9 +84,9 @@ export const api = {
     request<WatchRequest>('/watch-requests', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<CurrentUser>('/auth/me'),
   logout: () => request<{ status: string }>('/auth/logout', { method: 'POST' }),
+  adminLogin: (username: string, password: string) =>
+    request<CurrentUser>('/auth/admin-login', { method: 'POST', body: JSON.stringify({ username, password }) }),
   listSelectableUsers: () => request<UserSummary[]>('/auth/users'),
-  selectUser: (userId: number) =>
-    request<CurrentUser>('/auth/select', { method: 'POST', body: JSON.stringify({ user_id: userId }) }),
 
   adminListUsers: () => request<CurrentUser[]>('/admin/users'),
   adminCreateUser: (payload: {
@@ -94,9 +94,15 @@ export const api = {
     university_email: string
     whatsapp_number?: string
     is_admin?: boolean
+    password?: string
   }) => request<CurrentUser>('/admin/users', { method: 'POST', body: JSON.stringify(payload) }),
   adminUpdateUser: (
     id: number,
     payload: Partial<{ name: string; whatsapp_number: string; is_admin: boolean }>,
   ) => request<CurrentUser>(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  adminSetPassword: (id: number, password: string) =>
+    request<{ status: string }>(`/admin/users/${id}/set-password`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    }),
 }

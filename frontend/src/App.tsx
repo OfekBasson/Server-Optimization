@@ -3,23 +3,23 @@ import Dashboard from './pages/Dashboard'
 import ServerCalendar from './pages/ServerCalendar'
 import WatchRequests from './pages/WatchRequests'
 import Admin from './pages/Admin'
-import UserPicker from './UserPicker'
+import AdminLoginForm from './AdminLoginForm'
 import { AuthProvider, useAuth } from './AuthContext'
 
 function AuthStatus() {
-  const { user, loading, logout } = useAuth()
+  const { admin, loading, logout } = useAuth()
   if (loading) return null
-  if (!user) return <UserPicker />
+  if (!admin) return <AdminLoginForm />
   return (
     <span>
-      {user.name} · <button onClick={logout}>Sign out</button>
+      Admin: {admin.name} · <button onClick={logout}>Sign out</button>
     </span>
   )
 }
 
 function AdminLink() {
-  const { user } = useAuth()
-  if (!user?.is_admin) return null
+  const { admin } = useAuth()
+  if (!admin) return null
   return <Link to="/admin">Admin</Link>
 }
 

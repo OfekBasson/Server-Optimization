@@ -49,7 +49,7 @@ pip install -r requirements.txt
 export DATABASE_URL="sqlite:///$(pwd)/demo.db"
 python3 scripts/init_db.py
 python3 scripts/seed_servers.py             # real mass-01..06 hardware
-python3 scripts/seed_admin.py "Your Name" you@post.runi.ac.il
+python3 scripts/seed_admin.py "Your Name" you@post.runi.ac.il   # prompts for a password
 python3 scripts/seed_demo_data.py           # 2 fake users + 2 bookings so it's not empty
 
 uvicorn app.main:app --port 8000            # leave this running
@@ -63,11 +63,11 @@ npm install
 npm run dev                            # leave this running too
 ```
 
-Open **http://localhost:5173**, pick your name from the "Who are you?"
-dropdown top right, and click Continue. That's it — no OAuth, no password.
-You'll see the real dashboard and calendars, mass-01 shown as reserved by
-the demo data, and (since `seed_admin.py` made you an admin) an **Admin**
-link for adding more users.
+Open **http://localhost:5173**. You'll see the real dashboard and
+calendars, mass-01 shown as reserved by the demo data — no login needed to
+look around or book something (see "Identifying yourself" below). Log in
+with the email/password you gave `seed_admin.py` (top right) to reach the
+**Admin** page.
 
 To stop: `Ctrl+C` both terminals. Nothing here touches the real lab
 servers or sends any notifications (Twilio is off by default) - this is
@@ -79,7 +79,7 @@ fully sandboxed on your own machine, safe to leave running.
 cp .env.example .env
 docker compose up --build
 docker compose exec backend python scripts/seed_servers.py
-docker compose exec backend python scripts/seed_admin.py "Your Name" you@post.runi.ac.il
+docker compose exec backend python scripts/seed_admin.py "Your Name" you@post.runi.ac.il YourPassword
 ```
 
 API is at `http://localhost:8000` (interactive docs at `/docs`). Health
@@ -107,27 +107,39 @@ BACKEND_URL=http://<backend-host>:8000 AGENT_API_KEY=<key> SERVER_NAME=mass-01 p
 (`mass-01` .. `mass-06`). For a permanent install see "Installing the
 agent on all 6 servers" below.
 
-## Identifying yourself (no Microsoft OAuth)
+## Identifying yourself (regular users vs. admins)
 
-There's no login/password. Instead, the nav bar has a "Who are you?"
-dropdown listing every user the admin has added — pick your name, click
-Continue, and a session cookie remembers you (`/api/auth/me` reads it back,
-"Sign out" clears it). This only makes sense on a trusted internal network,
-not exposed publicly, since anyone can pick anyone's name.
+Two different trust levels:
 
-**Adding users** is admin-only, through the **Admin** nav link (only
-visible to admins) or directly via `POST /api/admin/users`. The very first
-admin has to be created once from the command line, since the admin API
-itself requires an existing admin to call it:
+- **Regular users never log in at all.** There's no session, no cookie,
+  nothing persistent. Instead, the moment you actually do something that
+  needs to know who you are — booking a server or creating a "notify me"
+  watch request — a small "Who's booking this?" / "Who is this request
+  for?" dialog pops up with a dropdown of everyone the admin has added.
+  Pick your name, confirm, done. This only makes sense on a trusted
+  internal network, not exposed publicly, since anyone can pick anyone's
+  name and there's no password check for it.
+- **Admins log in for real**, with a university email + password, via the
+  form in the top-right of the nav bar. That's a real (if lightweight)
+  session cookie, gating the **Admin** page - adding users, promoting
+  others to admin, setting/changing admin passwords. Regular users never
+  have a password at all; only admins do.
+
+**Adding users** is admin-only, through the **Admin** page or directly via
+`POST /api/admin/users`. The very first admin has to be created once from
+the command line, since the admin panel itself requires an existing admin
+to log into:
 
 ```bash
 python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
-# (docker compose exec backend python scripts/seed_admin.py ... if using Docker)
+# prompts for a password interactively - or pass it as a 3rd argument for
+# non-interactive use, e.g. `docker compose exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il YourPassword`
 ```
 
-That user can then add everyone else (and make other people admins) from
-the Admin page. Running it again on an existing email just promotes that
-user to admin instead of duplicating them.
+That admin can then add everyone else from the Admin page, and promote
+others to admin (which prompts for a password for them too - only admins
+have one). Running the script again on an existing email just re-promotes
+and resets that user's password instead of duplicating them.
 
 `SESSION_SECRET_KEY` in `.env` signs the session cookie — set it to
 something random before going live, not the default. `CORS_ORIGINS` is
@@ -181,7 +193,7 @@ nano .env   # set SESSION_SECRET_KEY to a random string, and CORS_ORIGINS
 
 docker compose up -d --build
 docker compose exec backend python scripts/seed_servers.py
-docker compose exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
+docker compose exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il YourPassword
 ```
 
 Backend is now running on port 8000 of that host. For the frontend:

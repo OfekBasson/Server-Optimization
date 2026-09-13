@@ -50,6 +50,8 @@ class User(Base):
     university_email = Column(String, unique=True, nullable=False, index=True)
     whatsapp_number = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False)
+    # Only ever set for admins - regular users never log in, so never have one.
+    password_hash = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
 
     os_usernames = relationship(

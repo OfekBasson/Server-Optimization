@@ -174,41 +174,83 @@ List existing mappings for a server: `GET /api/os-usernames?server_name=mass-01`
 This endpoint has no auth check yet — fine on a trusted lab network for
 now, but worth locking down before exposing it more broadly.
 
-## Deploying to a lab server
+## Going live on the web (free domain, auto-deploy on push)
 
-Pick one server to host the app itself (the booking API + database) —
-doesn't need to be one of the 6 GPU machines, but can be. SSH in, then:
+This runs the app on a real HTTPS URL on one of the lab's own servers, with
+a free subdomain, and redeploys automatically every time `main` is pushed.
+Pieces involved: **Caddy** (reverse proxy that gets a free HTTPS cert
+automatically), **DuckDNS** (free subdomain), and a **GitHub Actions**
+workflow that SSHes in and redeploys.
+
+### 1. Pick the server and get a free domain
+
+Pick one server to host the app (doesn't need to be one of the 6 GPU
+machines, but can be) — it needs to be reachable from the internet on
+ports 80/443. If your lab network blocks inbound connections (common on
+university networks), tell me and we'll switch to a tunnel-based option
+(e.g. Tailscale Funnel or Cloudflare Tunnel) instead, which needs no port
+forwarding at all.
+
+Get a free subdomain at **https://www.duckdns.org** (sign in with any
+account, e.g. GitHub) → add a subdomain, e.g. `canvaslab` → it becomes
+`canvaslab.duckdns.org` → point it at the server's public IP (DuckDNS's
+page does this for you once you enter the IP).
+
+### 2. One-time setup on the server
 
 ```bash
-# One-time: install Docker + Compose if not already present
-curl -fsSL https://get.docker.com | sh   # or your distro's package manager
+curl -fsSL https://get.docker.com | sh   # if Docker isn't already installed
 
 git clone https://github.com/OfekBasson/Server-Optimization.git
 cd Server-Optimization
-git checkout claude/canvas-lab-server-manager-dlef6l   # or main, once merged
+git checkout main
 
-cp .env.example .env
-nano .env   # set SESSION_SECRET_KEY to a random string, and CORS_ORIGINS
-            # to this server's real hostname:5173 instead of localhost
+cp .env.prod.example .env
+nano .env   # fill in DOMAIN (your duckdns.org address) and generate random
+            # values for POSTGRES_PASSWORD / SESSION_SECRET_KEY / AGENT_API_KEY
+            # with: openssl rand -hex 32
 
-docker compose up -d --build
-docker compose exec backend python scripts/seed_servers.py
-docker compose exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il YourPassword
+cd frontend && npm ci && npm run build && cd ..
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec backend python scripts/seed_servers.py
+docker compose -f docker-compose.prod.yml exec backend python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
 ```
 
-Backend is now running on port 8000 of that host. For the frontend:
+Caddy handles HTTPS automatically the first time it starts (needs ports
+80/443 open and the domain already pointing at this server). Visit
+`https://<your-domain>` — should just work, no port number needed.
+
+### 3. Wire up auto-deploy on push
+
+A dedicated SSH key for this (not your personal one) — I generated one and
+sent it to you as a file. Add its **public** half to the deploy user's
+`~/.ssh/authorized_keys` on the server:
 
 ```bash
-cd frontend
-npm install
-npm run build
-npx serve -s dist -l 5173   # or any static file server; nginx works too
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILffG2kQDwi08NaH+pRHn2HPDR2QtjwVAMB7W+Cthj/8 canvas-lab-deploy" >> ~/.ssh/authorized_keys
 ```
 
-Point people at `http://<that-host>:5173`. Login and API calls both work
-across the two ports on the same host without extra config — cookies
-aren't port-specific, only `CORS_ORIGINS` needs to list the frontend's
-actual origin (already set to that in `.env` above).
+Then, in the GitHub repo → **Settings → Secrets and variables → Actions**,
+add these secrets:
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | the server's hostname or IP |
+| `DEPLOY_PORT` | its SSH port |
+| `DEPLOY_USER` | the SSH username to deploy as |
+| `DEPLOY_SSH_KEY` | the **private** key (the file sent to you — paste its full contents) |
+| `DEPLOY_PATH` | absolute path to the cloned repo on the server, e.g. `/home/you/Server-Optimization` |
+
+`.github/workflows/deploy.yml` is already in the repo — once those secrets
+exist, every push to `main` SSHes in, pulls, rebuilds the frontend,
+`docker compose -f docker-compose.prod.yml up -d --build`, and re-runs
+`init_db.py` (safe to run repeatedly — only creates tables that don't
+exist yet, never touches existing data). You can also trigger it manually
+from the repo's **Actions** tab (`workflow_dispatch`).
+
+This branch (`claude/canvas-lab-server-manager-dlef6l`) needs to be merged
+into `main` before pushes there start deploying — say the word and I'll
+open that PR.
 
 ## Installing the agent on all 6 servers
 

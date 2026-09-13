@@ -6,5 +6,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 .env
+.env.prod
 *.db
 .DS_Store

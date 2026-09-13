@@ -46,8 +46,7 @@ export type UserSummary = {
 export type WatchRequest = {
   id: number
   user_id: number
-  min_vram_gb: number | null
-  gpu_type: string | null
+  gpu_types: string[] | null
   min_gpu_count: number | null
   min_cpu_cores: number | null
   min_ram_gb: number | null
@@ -78,9 +77,11 @@ export const api = {
   }) => request<Reservation>('/reservations', { method: 'POST', body: JSON.stringify(payload) }),
   releaseReservation: (id: number) =>
     request<Reservation>(`/reservations/${id}/release`, { method: 'POST' }),
+  rescheduleReservation: (id: number, payload: { start_time: string; end_time: string }) =>
+    request<Reservation>(`/reservations/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
   listWatchRequests: (userId: number) =>
     request<WatchRequest[]>(`/watch-requests?user_id=${userId}`),
-  createWatchRequest: (payload: { user_id: number; min_vram_gb?: number; gpu_type?: string }) =>
+  createWatchRequest: (payload: { user_id: number; gpu_types?: string[]; min_gpu_count?: number }) =>
     request<WatchRequest>('/watch-requests', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request<CurrentUser>('/auth/me'),
   logout: () => request<{ status: string }>('/auth/logout', { method: 'POST' }),

@@ -6,8 +6,8 @@ type Pending = 'create' | 'view' | null
 
 export default function WatchRequestModal({ onClose }: { onClose: () => void }) {
   const [gpuTypes, setGpuTypes] = useState<string[]>([])
-  const [minVram, setMinVram] = useState('')
-  const [gpuType, setGpuType] = useState('')
+  const [selectedGpuTypes, setSelectedGpuTypes] = useState<string[]>([])
+  const [minGpuCount, setMinGpuCount] = useState('')
   const [pending, setPending] = useState<Pending>(null)
   const [requests, setRequests] = useState<WatchRequest[] | null>(null)
   const [viewedAs, setViewedAs] = useState<UserSummary | null>(null)
@@ -19,6 +19,12 @@ export default function WatchRequestModal({ onClose }: { onClose: () => void }) 
     })
   }, [])
 
+  const toggleGpuType = (type: string) => {
+    setSelectedGpuTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    )
+  }
+
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setPending('create')
@@ -28,11 +34,11 @@ export default function WatchRequestModal({ onClose }: { onClose: () => void }) 
     if (pending === 'create') {
       await api.createWatchRequest({
         user_id: user.id,
-        min_vram_gb: minVram ? Number(minVram) : undefined,
-        gpu_type: gpuType || undefined,
+        gpu_types: selectedGpuTypes.length ? selectedGpuTypes : undefined,
+        min_gpu_count: minGpuCount ? Number(minGpuCount) : undefined,
       })
-      setMinVram('')
-      setGpuType('')
+      setSelectedGpuTypes([])
+      setMinGpuCount('')
       alert(`Watch request created for ${user.name}.`)
     } else if (pending === 'view') {
       setViewedAs(user)
@@ -47,19 +53,28 @@ export default function WatchRequestModal({ onClose }: { onClose: () => void }) 
         <h2>Notify me when a server is free</h2>
         <form onSubmit={submit}>
           <label>
-            Min VRAM (GB)
-            <input value={minVram} onChange={(e) => setMinVram(e.target.value)} type="number" min="0" />
+            GPU type (any checked, or leave blank for any GPU)
+            <div className="checkbox-group">
+              {gpuTypes.map((t) => (
+                <label key={t} className="checkbox-item">
+                  <input
+                    type="checkbox"
+                    checked={selectedGpuTypes.includes(t)}
+                    onChange={() => toggleGpuType(t)}
+                  />
+                  {t}
+                </label>
+              ))}
+            </div>
           </label>
           <label>
-            GPU type
-            <select value={gpuType} onChange={(e) => setGpuType(e.target.value)}>
-              <option value="">Any GPU</option>
-              {gpuTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            Min GPUs needed
+            <input
+              value={minGpuCount}
+              onChange={(e) => setMinGpuCount(e.target.value)}
+              type="number"
+              min="1"
+            />
           </label>
           <button type="submit">Create watch request</button>
         </form>
@@ -75,7 +90,8 @@ export default function WatchRequestModal({ onClose }: { onClose: () => void }) 
               <ul>
                 {requests.map((r) => (
                   <li key={r.id}>
-                    {r.gpu_type || 'any GPU'} · min {r.min_vram_gb ?? '-'}GB · {r.status}
+                    {r.gpu_types?.length ? r.gpu_types.join(' / ') : 'any GPU'} · min{' '}
+                    {r.min_gpu_count ?? 1} GPU{(r.min_gpu_count ?? 1) === 1 ? '' : 's'} · {r.status}
                   </li>
                 ))}
               </ul>

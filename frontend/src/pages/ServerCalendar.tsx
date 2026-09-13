@@ -3,8 +3,8 @@ import { useParams } from 'react-router-dom'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
-import interactionPlugin from '@fullcalendar/interaction'
-import { DateSelectArg, EventMountArg } from '@fullcalendar/core'
+import interactionPlugin, { EventResizeDoneArg } from '@fullcalendar/interaction'
+import { DateSelectArg, EventDropArg, EventMountArg } from '@fullcalendar/core'
 import { api, Reservation, UserSummary } from '../api'
 import IdentifyModal from '../IdentifyModal'
 import ConfirmDeleteModal from '../ConfirmDeleteModal'
@@ -76,6 +76,24 @@ export default function ServerCalendar() {
     }
   }
 
+  const handleEventChange = async (info: EventDropArg | EventResizeDoneArg) => {
+    const { event } = info
+    if (!event.start || !event.end) {
+      info.revert()
+      return
+    }
+    try {
+      await api.rescheduleReservation(Number(event.id), {
+        start_time: event.start.toISOString(),
+        end_time: event.end.toISOString(),
+      })
+      refresh()
+    } catch (err) {
+      alert((err as Error).message)
+      info.revert()
+    }
+  }
+
   const handleEventDidMount = (info: EventMountArg) => {
     const onContextMenu = (e: MouseEvent) => {
       e.preventDefault()
@@ -113,7 +131,8 @@ export default function ServerCalendar() {
     <div className="server-calendar">
       <h1>Server {id}</h1>
       <p className="calendar-hint">
-        Click and drag across the time you want to book. Right-click an existing booking to release it.
+        Click and drag across the time you want to book. Drag or resize an existing booking to
+        move it. Right-click a booking to release it.
       </p>
       <div className="calendar-wrap">
         <FullCalendar
@@ -122,7 +141,10 @@ export default function ServerCalendar() {
           initialView="timeGridWeek"
           events={events}
           selectable
+          editable
           select={handleSelect}
+          eventDrop={handleEventChange}
+          eventResize={handleEventChange}
           eventDidMount={handleEventDidMount}
           eventWillUnmount={handleEventWillUnmount}
           height="100%"

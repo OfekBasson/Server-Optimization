@@ -165,8 +165,9 @@ class WatchRequest(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    min_vram_gb = Column(Float, nullable=True)
-    gpu_type = Column(String, nullable=True)
+    # None/empty means "any GPU type"; a server matches if its gpu_type is
+    # one of these (case-insensitive)
+    gpu_types = Column(JSON, nullable=True)
     min_gpu_count = Column(Integer, nullable=True)
     min_cpu_cores = Column(Integer, nullable=True)
     min_ram_gb = Column(Float, nullable=True)

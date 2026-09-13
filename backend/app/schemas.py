@@ -74,12 +74,16 @@ class ReservationOut(BaseModel):
     created_at: AwareDatetime
 
 
+class ReservationReschedule(BaseModel):
+    start_time: datetime
+    end_time: datetime
+
+
 # ---------- Watch requests ----------
 
 class WatchRequestCreate(BaseModel):
     user_id: int
-    min_vram_gb: Optional[float] = None
-    gpu_type: Optional[str] = None
+    gpu_types: Optional[list[str]] = None
     min_gpu_count: Optional[int] = None
     min_cpu_cores: Optional[int] = None
     min_ram_gb: Optional[float] = None
@@ -90,8 +94,7 @@ class WatchRequestOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user_id: int
-    min_vram_gb: Optional[float] = None
-    gpu_type: Optional[str] = None
+    gpu_types: Optional[list[str]] = None
     min_gpu_count: Optional[int] = None
     min_cpu_cores: Optional[int] = None
     min_ram_gb: Optional[float] = None

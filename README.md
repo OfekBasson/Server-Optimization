@@ -47,7 +47,6 @@ python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 export DATABASE_URL="sqlite:///$(pwd)/demo.db"
-export PYTHONPATH="$(pwd)"
 python3 scripts/init_db.py
 python3 scripts/seed_servers.py             # real mass-01..06 hardware
 python3 scripts/seed_admin.py "Your Name" you@post.runi.ac.il

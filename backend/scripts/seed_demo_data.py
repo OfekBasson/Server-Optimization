@@ -4,7 +4,11 @@ inspection run has something to look at. Run after seed_servers.py.
 Safe to re-run - it just adds another round of demo data each time.
 """
 
+import os
+import sys
 from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
 from app.models import Reservation, ReservationStatus, Server, User

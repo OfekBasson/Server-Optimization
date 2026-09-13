@@ -8,6 +8,11 @@ in later via `POST /api/servers` or directly in the DB if useful for
 matching watch requests on CPU/RAM as well as GPU.
 """
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from app.database import SessionLocal
 from app.models import Server
 

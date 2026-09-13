@@ -5,7 +5,10 @@ Usage:
     python scripts/seed_admin.py "Ofek Basson" ofek.basson@post.runi.ac.il
 """
 
+import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
 from app.models import User
